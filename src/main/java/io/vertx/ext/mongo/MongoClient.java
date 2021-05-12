@@ -2,6 +2,7 @@ package io.vertx.ext.mongo;
 
 import com.mongodb.MongoClientSettings;
 import com.mongodb.ReadPreference;
+import com.mongodb.client.model.changestream.ChangeStreamDocument;
 import io.vertx.codegen.annotations.Fluent;
 import io.vertx.codegen.annotations.GenIgnore;
 import io.vertx.codegen.annotations.Nullable;
@@ -732,6 +733,15 @@ public interface MongoClient {
    * @param options    options to configure the aggregation command
    */
   ReadStream<JsonObject> aggregateWithOptions(String collection, final JsonArray pipeline, final AggregateOptions options);
+
+  /**
+   * Watch the collection change.
+   * @param collection the collection
+   * @param pipeline   watching pipeline to be executed
+   * @param withUpdatedDoc whether to get updated fullDocument for "update" operation
+   * @param batchSize  the number of documents to load in a batch
+   */
+  ReadStream<ChangeStreamDocument<JsonObject>> watch(String collection, JsonArray pipeline, boolean withUpdatedDoc, int batchSize);
 
   /**
    * Creates a {@link MongoGridFsClient} used to interact with Mongo GridFS.

@@ -21,6 +21,8 @@ import com.mongodb.ReadPreference;
 import com.mongodb.WriteConcern;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.model.*;
+import com.mongodb.client.model.changestream.ChangeStreamDocument;
+import com.mongodb.client.model.changestream.FullDocument;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import com.mongodb.reactivestreams.client.*;
@@ -51,10 +53,12 @@ import org.bson.types.ObjectId;
 import org.reactivestreams.Publisher;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static io.vertx.ext.mongo.impl.Utils.ID_FIELD;
 import static io.vertx.ext.mongo.impl.Utils.setHandler;
@@ -915,6 +919,25 @@ public class MongoClientImpl implements io.vertx.ext.mongo.MongoClient, Closeabl
   public ReadStream<JsonObject> aggregateWithOptions(final String collection, final JsonArray pipeline, final AggregateOptions options) {
     AggregatePublisher<JsonObject> view = doAggregate(collection, pipeline, options);
     return new PublisherAdapter<>(vertx.getOrCreateContext(), view, options.getBatchSize());
+  }
+
+  @Override
+  public ReadStream<ChangeStreamDocument<JsonObject>> watch(final String collection, final JsonArray pipeline, boolean withUpdatedDoc, int batchSize) {
+    requireNonNull(collection, "collection cannot be null");
+    requireNonNull(pipeline, "pipeline cannot be null");
+    MongoCollection<JsonObject> coll = getCollection(collection);
+    final List<Bson> bpipeline = new ArrayList<>(pipeline.size());
+    pipeline.getList().forEach(entry -> bpipeline.add(wrap(JsonObject.mapFrom(entry))));
+    ChangeStreamPublisher<JsonObject> changeStreamPublisher = coll.watch(bpipeline, JsonObject.class);
+    if (withUpdatedDoc) {
+      // By default, only "insert" and "replace" operations return fullDocument as created document
+      // To get updated fullDocument for "update" operation
+      changeStreamPublisher.fullDocument(FullDocument.UPDATE_LOOKUP);
+    }
+    if (batchSize < 1) {
+      batchSize = 1;
+    }
+    return new PublisherAdapter<>(vertx.getOrCreateContext(), changeStreamPublisher, batchSize);
   }
 
   private DistinctPublisher<?> findDistinctValuesWithQuery(String collection, String fieldName, String resultClassname, JsonObject query) throws ClassNotFoundException {
