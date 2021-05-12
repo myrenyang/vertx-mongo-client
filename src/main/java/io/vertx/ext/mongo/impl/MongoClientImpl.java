@@ -17,6 +17,7 @@
 package io.vertx.ext.mongo.impl;
 
 import com.mongodb.MongoClientSettings;
+import com.mongodb.ReadPreference;
 import com.mongodb.WriteConcern;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.model.*;
@@ -351,6 +352,18 @@ public class MongoClientImpl implements io.vertx.ext.mongo.MongoClient, Closeabl
 
   @Override
   public Future<@Nullable JsonObject> findOne(String collection, JsonObject query, @Nullable JsonObject fields) {
+    return findOne(collection, query, fields, (ReadPreference) null);
+  }
+
+  @Override
+  public MongoClient findOne(String collection, JsonObject query, @Nullable JsonObject fields, @Nullable ReadPreference readPreference, Handler<AsyncResult<@Nullable JsonObject>> resultHandler) {
+    Future<JsonObject> future = findOne(collection, query, fields, readPreference);
+    setHandler(future, resultHandler);
+    return this;
+  }
+
+  @Override
+  public Future<@Nullable JsonObject> findOne(String collection, JsonObject query, @Nullable JsonObject fields, @Nullable ReadPreference readPreference) {
     requireNonNull(collection, "collection cannot be null");
     requireNonNull(query, "query cannot be null");
 
@@ -358,8 +371,13 @@ public class MongoClientImpl implements io.vertx.ext.mongo.MongoClient, Closeabl
 
     Bson bquery = wrap(encodedQuery);
     Bson bfields = wrap(fields);
+
     Promise<JsonObject> promise = vertx.promise();
-    getCollection(collection).find(bquery).projection(bfields).first().subscribe(new SingleResultSubscriber<>(promise));
+    MongoCollection<JsonObject> mongoCollection = getCollection(collection);
+    if (readPreference != null) {
+      mongoCollection.withReadPreference(readPreference);
+    }
+    mongoCollection.find(bquery).projection(bfields).first().subscribe(new SingleResultSubscriber<>(promise));
     return promise.future().map(object -> object == null ? null : decodeKeyWhenUseObjectId(object));
   }
 
