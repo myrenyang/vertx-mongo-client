@@ -315,12 +315,14 @@ public interface MongoClient {
   /**
    * Like {@link #findOne(String, JsonObject, JsonObject, Handler)} but give an option to set ReadPreference
    */
+  @GenIgnore(GenIgnore.PERMITTED_TYPE)
   @Fluent
   MongoClient findOne(String collection, JsonObject query, @Nullable JsonObject fields, @Nullable ReadPreference readPreference, Handler<AsyncResult<@Nullable JsonObject>> resultHandler);
 
   /**
    * Like {@link #findOne(String, JsonObject, JsonObject)} but give an option to set ReadPreference
    */
+  @GenIgnore(GenIgnore.PERMITTED_TYPE)
   Future<@Nullable JsonObject> findOne(String collection, JsonObject query, @Nullable JsonObject fields, @Nullable ReadPreference readPreference);
 
   /**
@@ -741,6 +743,7 @@ public interface MongoClient {
    * @param withUpdatedDoc whether to get updated fullDocument for "update" operation
    * @param batchSize  the number of documents to load in a batch
    */
+  @GenIgnore(GenIgnore.PERMITTED_TYPE)
   ReadStream<ChangeStreamDocument<JsonObject>> watch(String collection, JsonArray pipeline, boolean withUpdatedDoc, int batchSize);
 
   /**
