@@ -23,7 +23,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <artifactId>vertx-mongo-client</artifactId>
-  <version>4.1.0-SNAPSHOT-triage</version>
+  <version>4.1.0-beta-triage</version>
 
   <properties>
     <stack.version>4.1.0-SNAPSHOT</stack.version>
