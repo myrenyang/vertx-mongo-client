@@ -53,12 +53,10 @@ import org.bson.types.ObjectId;
 import org.reactivestreams.Publisher;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static io.vertx.ext.mongo.impl.Utils.ID_FIELD;
 import static io.vertx.ext.mongo.impl.Utils.setHandler;
@@ -377,11 +375,11 @@ public class MongoClientImpl implements io.vertx.ext.mongo.MongoClient, Closeabl
     Bson bfields = wrap(fields);
 
     Promise<JsonObject> promise = vertx.promise();
-    MongoCollection<JsonObject> mongoCollection = getCollection(collection);
+    MongoCollection<JsonObject> coll = getCollection(collection);
     if (readPreference != null) {
-      mongoCollection.withReadPreference(readPreference);
+      coll = coll.withReadPreference(readPreference);
     }
-    mongoCollection.find(bquery).projection(bfields).first().subscribe(new SingleResultSubscriber<>(promise));
+    coll.find(bquery).projection(bfields).first().subscribe(new SingleResultSubscriber<>(promise));
     return promise.future().map(object -> object == null ? null : decodeKeyWhenUseObjectId(object));
   }
 
@@ -930,8 +928,8 @@ public class MongoClientImpl implements io.vertx.ext.mongo.MongoClient, Closeabl
     pipeline.getList().forEach(entry -> bpipeline.add(wrap(JsonObject.mapFrom(entry))));
     ChangeStreamPublisher<JsonObject> changeStreamPublisher = coll.watch(bpipeline, JsonObject.class);
     if (withUpdatedDoc) {
-      // By default, only "insert" and "replace" operations return fullDocument as created document
-      // To get updated fullDocument for "update" operation
+      // By default, only "insert" and "replace" operations return fullDocument
+      // Following setting is for "update" operation to return fullDocument
       changeStreamPublisher.fullDocument(FullDocument.UPDATE_LOOKUP);
     }
     if (batchSize < 1) {
@@ -1003,6 +1001,9 @@ public class MongoClientImpl implements io.vertx.ext.mongo.MongoClient, Closeabl
   private FindPublisher<JsonObject> doFind(String collection, JsonObject query, FindOptions options) {
     MongoCollection<JsonObject> coll = getCollection(collection);
     Bson bquery = wrap(encodeKeyWhenUseObjectId(query));
+    if (options.getReadPreference() != null) {
+      coll = coll.withReadPreference(options.getReadPreference(true));
+    }
     FindPublisher<JsonObject> find = coll.find(bquery, JsonObject.class);
     if (options.getLimit() != -1) {
       find.limit(options.getLimit());
